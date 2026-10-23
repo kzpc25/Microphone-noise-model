@@ -122,6 +122,13 @@ aside.rack { background: var(--panel); border: 1px solid var(--line); border-rad
 .key { display: inline-block; width: 14px; height: 0; border-top: 2px solid currentColor; vertical-align: middle; }
 .key.dash { border-top-style: dashed; }
 
+.yctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+.yctl input { width: 64px; font-family: var(--f-mono); font-size: 12px; padding: 3px 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); text-align: right; }
+.yctl .u { font-family: var(--f-mono); color: var(--muted); }
+.yctl button { padding: 2px 9px; font-size: 12px; min-width: 28px; }
+.yctl .hint { color: var(--muted); font-size: 11px; }
+@media (hover: none) { .yctl .hint { display: none; } }
+.chart { cursor: ns-resize; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 6px; }
 .legend button { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 8px; border-radius: 999px; }
 .legend button[aria-pressed="false"] { opacity: 0.45; }
@@ -212,6 +219,12 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
           <p>dBV/√Hz（ASIC出力、0 dB = 1 V/√Hz）・入力換算ノイズ × 出力感度 |S(f)|²・網掛けは可聴帯域 20 Hz–20 kHz</p>
         </div>
         <div class="legend" id="legend"></div>
+        <div class="yctl" role="group" aria-label="縦軸の範囲">
+          <span class="eyebrow">縦軸</span>
+          <input type="number" id="noise-ymin" step="5" aria-label="縦軸 最小 (dBV/√Hz)"><span>〜</span><input type="number" id="noise-ymax" step="5" aria-label="縦軸 最大 (dBV/√Hz)"><span class="u">dBV/√Hz</span>
+          <button type="button" id="noise-zin" title="拡大">＋</button><button type="button" id="noise-zout" title="縮小">−</button><button type="button" id="noise-auto" aria-pressed="true">自動</button>
+          <span class="hint">ホイールで拡大縮小・ドラッグで上下移動・ダブルクリックで自動</span>
+        </div>
         <div class="chart" id="c-noise"></div>
       </section>
 
@@ -230,6 +243,12 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
             <h2>周波数特性</h2>
             <p>感度 dB re 1 kHz</p>
           </div>
+          <div class="yctl" role="group" aria-label="縦軸の範囲">
+          <span class="eyebrow">縦軸</span>
+          <input type="number" id="resp-ymin" step="5" aria-label="縦軸 最小 (dB)"><span>〜</span><input type="number" id="resp-ymax" step="5" aria-label="縦軸 最大 (dB)"><span class="u">dB</span>
+          <button type="button" id="resp-zin" title="拡大">＋</button><button type="button" id="resp-zout" title="縮小">−</button><button type="button" id="resp-auto" aria-pressed="true">自動</button>
+          <span class="hint">ホイールで拡大縮小・ドラッグで上下移動・ダブルクリックで自動</span>
+        </div>
           <div class="chart" id="c-resp"></div>
         </section>
       </div>
@@ -548,17 +567,26 @@ function buildLegend() {
 }
 
 // ---------- chart ----------
+// y-axis view per chart: null = auto, otherwise { y0, y1 } set by the user
+const yView = { noise: null, resp: null };
+let clipSeq = 0;
+function niceStep(span) {
+  const raw = span / 7, p = 10 ** Math.floor(Math.log10(raw)), r = raw / p;
+  return (r < 1.5 ? 1 : r < 3.5 ? 2 : r < 7.5 ? 5 : 10) * p;
+}
 function logChart(host, cfg) {
   host.innerHTML = "";
   const W = Math.max(320, host.clientWidth), H = cfg.h;
-  const m = { l: 44, r: 12, t: 22, b: 30 };
+  const m = { l: 48, r: 12, t: 22, b: 30 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
   const lx = (f) => m.l + (Math.log10(f) - Math.log10(cfg.x0)) / (Math.log10(cfg.x1) - Math.log10(cfg.x0)) * iw;
-  const ly = (y) => m.t + (1 - (Math.min(cfg.y1, Math.max(cfg.y0, y)) - cfg.y0) / (cfg.y1 - cfg.y0)) * ih;
+  const ly = (y) => m.t + (1 - (y - cfg.y0) / (cfg.y1 - cfg.y0)) * ih;
+  host._geom = { W, H, m, iw, ih, y0: cfg.y0, y1: cfg.y1 };
   const NS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(NS, "svg");
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", cfg.aria);
-  let g = "";
+  const cid = "clip" + (++clipSeq);
+  let g = `<defs><clipPath id="${cid}"><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}"/></clipPath></defs>`;
   if (cfg.band) g += `<rect class="band" x="${lx(cfg.band[0])}" y="${m.t}" width="${lx(cfg.band[1]) - lx(cfg.band[0])}" height="${ih}"/>`;
   for (let d = Math.log10(cfg.x0); d < Math.log10(cfg.x1); d++) {
     for (let k = 1; k <= 9; k++) {
@@ -568,16 +596,22 @@ function logChart(host, cfg) {
     }
   }
   g += `<text x="${lx(cfg.x1)}" y="${H - 10}" text-anchor="end">${cfg.x1 >= 1000 ? cfg.x1 / 1000 + "k" : cfg.x1} Hz</text>`;
-  for (let y = cfg.y0; y <= cfg.y1 + 1e-9; y += cfg.dy) {
-    g += `<line class="gl${y === 0 ? " major" : ""}" x1="${m.l}" x2="${m.l + iw}" y1="${ly(y)}" y2="${ly(y)}"/>`;
-    g += `<text x="${m.l - 6}" y="${ly(y) + 4}" text-anchor="end">${y}</text>`;
+  const dy = niceStep(cfg.y1 - cfg.y0), dec = dy < 1 ? Math.ceil(-Math.log10(dy)) : 0;
+  for (let y = Math.ceil(cfg.y0 / dy - 1e-9) * dy; y <= cfg.y1 + 1e-9; y += dy) {
+    g += `<line class="gl${Math.abs(y) < dy / 2 ? " major" : ""}" x1="${m.l}" x2="${m.l + iw}" y1="${ly(y)}" y2="${ly(y)}"/>`;
+    g += `<text x="${m.l - 6}" y="${ly(y) + 4}" text-anchor="end">${(Math.abs(y) < dy / 2 ? 0 : y).toFixed(dec)}</text>`;
   }
   g += `<text x="${m.l - 6}" y="${m.t - 10}" text-anchor="end" style="font-size:10px">${cfg.yu}</text>`;
+  g += `<g clip-path="url(#${cid})">`;
   for (const s of cfg.series) {
     let d = "";
-    for (let i = 0; i < s.y.length; i++) d += (i ? "L" : "M") + lx(cfg.f[i]).toFixed(1) + " " + ly(s.y[i]).toFixed(1);
+    for (let i = 0; i < s.y.length; i++) {
+      const yy = Math.max(-1e4, Math.min(1e4, ly(s.y[i]))); // keep -Inf/huge values drawable; clip hides them
+      d += (i ? "L" : "M") + lx(cfg.f[i]).toFixed(1) + " " + yy.toFixed(1);
+    }
     g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w || 2}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ""} stroke-linejoin="round" stroke-linecap="round"/>`;
   }
+  g += `</g>`;
   g += `<line class="xh" id="xh" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" visibility="hidden"/><g id="xdots"></g>`;
   g += `<rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="hit" tabindex="0"/>`;
   svg.innerHTML = g;
@@ -588,12 +622,13 @@ function logChart(host, cfg) {
   const show = (i) => {
     const x = lx(cfg.f[i]);
     xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.setAttribute("visibility", "visible");
-    dots.innerHTML = cfg.series.map((s) => `<circle cx="${x}" cy="${ly(s.y[i])}" r="3.5" fill="${s.color}" stroke="${css("--panel")}" stroke-width="2"/>`).join("");
+    dots.innerHTML = cfg.series.filter((s) => s.y[i] >= cfg.y0 && s.y[i] <= cfg.y1)
+      .map((s) => `<circle cx="${x}" cy="${ly(s.y[i])}" r="3.5" fill="${s.color}" stroke="${css("--panel")}" stroke-width="2"/>`).join("");
     tip.innerHTML = ""; const hd = document.createElement("div"); hd.className = "f"; hd.textContent = fHz(cfg.f[i]); tip.appendChild(hd);
     for (const s of cfg.series) {
       const r = document.createElement("div"); r.className = "r";
       const k = document.createElement("span"); k.className = "key" + (s.dash ? " dash" : ""); k.style.color = s.color;
-      const b = document.createElement("b"); b.textContent = s.y[i].toFixed(1);
+      const b = document.createElement("b"); b.textContent = isFinite(s.y[i]) ? s.y[i].toFixed(1) : "–";
       const l = document.createElement("span"); l.textContent = s.label;
       r.append(k, b, l); tip.appendChild(r);
     }
@@ -605,6 +640,7 @@ function logChart(host, cfg) {
   };
   let cur = Math.round(n * 0.6);
   hit.addEventListener("pointermove", (e) => {
+    if (host._drag) return;
     const r = svg.getBoundingClientRect(); const x = (e.clientX - r.left) * W / r.width;
     const t = (x - m.l) / iw; cur = Math.max(0, Math.min(n - 1, Math.round(t * (n - 1)))); show(cur);
   });
@@ -618,6 +654,56 @@ function logChart(host, cfg) {
   });
 }
 
+// Wheel = zoom Y around the pointer, drag = pan Y, double-click = auto. Listeners live on the
+// host so they survive the chart being rebuilt on every frame.
+function enableYZoom(key, hostId, redraw) {
+  const host = document.getElementById(hostId);
+  const set = (y0, y1) => { if (!(y1 - y0 > 0.5) || y1 - y0 > 1000) return; yView[key] = { y0, y1 }; redraw(); };
+  const inPlot = (e) => {
+    const g = host._geom; if (!g) return null;
+    const r = host.querySelector("svg").getBoundingClientRect();
+    const px = (e.clientX - r.left) * g.W / r.width, py = (e.clientY - r.top) * g.H / r.height;
+    if (px < g.m.l || px > g.m.l + g.iw || py < g.m.t || py > g.m.t + g.ih) return null;
+    return { g, py, pxPerUnit: r.height / g.H };
+  };
+  host.addEventListener("wheel", (e) => {
+    const p = inPlot(e); if (!p) return;
+    e.preventDefault();
+    const { g } = p, yc = g.y1 - (p.py - g.m.t) / g.ih * (g.y1 - g.y0);
+    const k = Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 100) / 100 * 0.18);
+    set(yc - (yc - g.y0) * k, yc + (g.y1 - yc) * k);
+  }, { passive: false });
+  host.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    const p = inPlot(e); if (!p) return;
+    host._drag = { sy: e.clientY, y0: p.g.y0, y1: p.g.y1, unit: (p.g.y1 - p.g.y0) / (p.g.ih * p.pxPerUnit) };
+    host.setPointerCapture(e.pointerId); host.style.cursor = "grabbing"; e.preventDefault();
+  });
+  host.addEventListener("pointermove", (e) => {
+    const d = host._drag; if (!d) return;
+    const shift = (e.clientY - d.sy) * d.unit;
+    set(d.y0 + shift, d.y1 + shift);
+  });
+  const end = () => { host._drag = null; host.style.cursor = ""; };
+  host.addEventListener("pointerup", end); host.addEventListener("pointercancel", end);
+  host.addEventListener("dblclick", (e) => { if (inPlot(e)) { yView[key] = null; redraw(); } });
+  // form controls
+  const lo = document.getElementById(key + "-ymin"), hi = document.getElementById(key + "-ymax");
+  const fromInputs = () => { const a = parseFloat(lo.value), b = parseFloat(hi.value); if (isFinite(a) && isFinite(b) && b > a) set(a, b); };
+  lo.addEventListener("change", fromInputs); hi.addEventListener("change", fromInputs);
+  const zoom = (k) => { const g = host._geom; const c = (g.y0 + g.y1) / 2; set(c - (c - g.y0) * k, c + (g.y1 - c) * k); };
+  document.getElementById(key + "-zin").addEventListener("click", () => zoom(0.7));
+  document.getElementById(key + "-zout").addEventListener("click", () => zoom(1 / 0.7));
+  document.getElementById(key + "-auto").addEventListener("click", () => { yView[key] = null; redraw(); });
+}
+function syncYInputs(key, y0, y1) {
+  const lo = document.getElementById(key + "-ymin"), hi = document.getElementById(key + "-ymax");
+  if (document.activeElement !== lo) lo.value = +y0.toFixed(1);
+  if (document.activeElement !== hi) hi.value = +y1.toFixed(1);
+  const auto = document.getElementById(key + "-auto");
+  auto.classList.toggle("on", !yView[key]); auto.setAttribute("aria-pressed", String(!yView[key]));
+}
+
 const toDb = (arr) => Array.from(arr, (x) => 10 * Math.log10(x / (PREF * PREF)));
 // output-referred: input-referred Pa²/Hz × |S_out|² → V²/Hz
 const toDbV = (arr, sout2) => Array.from(arr, (x, i) => 10 * Math.log10(x * sout2[i]));
@@ -629,19 +715,33 @@ function drawNoise() {
   if (snapshot) series.push({ label: "基準", y: snapshot.tot, color: css("--muted"), w: 1.5, dash: "5 4" });
   for (const s of SOURCES) if (!hidden.has(s.key)) series.push({ label: s.lab, y: toDbV(R.ser[s.key], R.sout2), color: css(s.c), w: 1.6 });
   if (!hidden.has("total")) series.push({ label: "合計", y: toDbV(R.tot, R.sout2), color: css("--ink"), w: 2.6 });
-  const tdb = toDbV(R.tot, R.sout2);
-  let mx = -1e9; for (let i = 0; i < R.f.length; i++) if (R.f[i] < 30000) mx = Math.max(mx, tdb[i]);
-  const y1 = Math.ceil((mx + 6) / 10) * 10;
-  logChart(document.getElementById("c-noise"), { f: R.f, x0: 10, x1: 1e5, y0: y1 - 70, y1, dy: 10, h: 340, band: [20, 20000], series, yu: "dBV", aria: "出力ノイズ密度の周波数特性 (dBV/√Hz)" });
+  let y0, y1;
+  if (yView.noise) ({ y0, y1 } = yView.noise);
+  else {
+    // auto: fit every visible curve inside 10 Hz–30 kHz, but no deeper than 40 dB under the total
+    const tdb = toDbV(R.tot, R.sout2);
+    let mx = -1e9, mn = 1e9;
+    for (let i = 0; i < R.f.length; i++) if (R.f[i] < 30000) { mx = Math.max(mx, tdb[i]); mn = Math.min(mn, tdb[i]); }
+    for (const s of series) for (let i = 0; i < R.f.length; i++) if (R.f[i] < 30000 && isFinite(s.y[i])) mn = Math.min(mn, Math.max(s.y[i], tdb[i] - 40));
+    y1 = Math.ceil((mx + 5) / 10) * 10; y0 = Math.floor((mn - 3) / 10) * 10;
+    if (y1 - y0 < 40) y0 = y1 - 40;
+  }
+  syncYInputs("noise", y0, y1);
+  logChart(document.getElementById("c-noise"), { f: R.f, x0: 10, x1: 1e5, y0, y1, h: 340, band: [20, 20000], series, yu: "dBV", aria: "出力ノイズ密度の周波数特性 (dBV/√Hz)" });
 }
 function drawResp() {
   const R = last;
   const series = [];
   if (snapshot) series.push({ label: "基準", y: snapshot.resp, color: css("--muted"), w: 1.5, dash: "5 4" });
   series.push({ label: "感度 (dB re 1 kHz)", y: Array.from(R.resp), color: css("--accent"), w: 2.2 });
-  let mx = 0; for (const v of R.resp) mx = Math.max(mx, v);
-  const y1 = Math.max(10, Math.ceil(mx / 5) * 5);
-  logChart(document.getElementById("c-resp"), { f: R.f, x0: 10, x1: 1e5, y0: -20, y1, dy: 5, h: 260, band: [20, 20000], series, yu: "dB", aria: "感度の周波数特性" });
+  let y0, y1;
+  if (yView.resp) ({ y0, y1 } = yView.resp);
+  else {
+    let mx = 0, mn = 0; for (const v of R.resp) { mx = Math.max(mx, v); mn = Math.min(mn, v); }
+    y1 = Math.max(10, Math.ceil((mx + 1) / 5) * 5); y0 = Math.min(-10, Math.max(-40, Math.floor((mn - 1) / 5) * 5));
+  }
+  syncYInputs("resp", y0, y1);
+  logChart(document.getElementById("c-resp"), { f: R.f, x0: 10, x1: 1e5, y0, y1, h: 260, band: [20, 20000], series, yu: "dB", aria: "感度の周波数特性" });
 }
 
 function drawBars() {
@@ -849,6 +949,9 @@ const mq = matchMedia("(prefers-color-scheme: dark)");
 mq.addEventListener?.("change", () => update());
 new MutationObserver(() => update()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-buildRack(); buildLegend(); applyPreset("std");
+buildRack(); buildLegend();
+enableYZoom("noise", "c-noise", drawNoise);
+enableYZoom("resp", "c-resp", drawResp);
+applyPreset("std");
 </script>
 </body></html>

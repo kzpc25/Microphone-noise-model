@@ -207,6 +207,7 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
   <section class="kpis" aria-label="主要結果">
     <div class="kpi lead"><span class="eyebrow">SNR (94 dB SPL, A特性)</span><span class="v" id="k-snr">–</span><span class="d" id="k-snr-d"></span></div>
     <div class="kpi"><span class="eyebrow">等価入力雑音 EIN</span><span class="v" id="k-ein">–</span><span class="d" id="k-ein-d"></span></div>
+    <div class="kpi"><span class="eyebrow">出力ノイズフロア (A)</span><span class="v" id="k-nout">–</span><span class="d" id="k-nout-d"></span></div>
     <div class="kpi"><span class="eyebrow">感度 @1 kHz</span><span class="v" id="k-sens">–</span><span class="d" id="k-sens-d"></span></div>
     <div class="kpi"><span class="eyebrow">共振周波数</span><span class="v" id="k-fres">–</span><span class="d" id="k-fres-d"></span></div>
     <div class="kpi"><span class="eyebrow">低域 −3 dB</span><span class="v" id="k-flf">–</span><span class="d" id="k-flf-d"></span></div>
@@ -504,11 +505,12 @@ function simulate(v) {
   // A-weighted and flat integration on 20 Hz–20 kHz
   const m = 600, a = Math.log(20), b = Math.log(20000);
   const intA = {}, intZ = {}; for (const s of SOURCES) { intA[s.key] = 0; intZ[s.key] = 0; }
-  let totA = 0, totZ = 0, prev = null;
+  let totA = 0, totZ = 0, outA = 0, outZ = 0, prev = null; // out*: output-referred V²
+
   for (let j = 0; j < m; j++) {
     const fj = Math.exp(a + (b - a) * j / (m - 1));
     const r = point(L, fj), wA = aWeight2(fj);
-    const cur = { f: fj, s: r.s, tot: r.tot, wA };
+    const cur = { f: fj, s: r.s, tot: r.tot, wA, o2: r.tot * r.Sout * r.Sout };
     if (prev) {
       const df = fj - prev.f;
       for (const k in r.s) {
@@ -517,6 +519,8 @@ function simulate(v) {
       }
       totA += 0.5 * df * (r.tot * wA + prev.tot * prev.wA);
       totZ += 0.5 * df * (r.tot + prev.tot);
+      outA += 0.5 * df * (cur.o2 * wA + prev.o2 * prev.wA);
+      outZ += 0.5 * df * (cur.o2 + prev.o2);
     }
     prev = cur;
   }
@@ -529,6 +533,7 @@ function simulate(v) {
   const db = (x) => 10 * Math.log10(x / (PREF * PREF));
   const NA = db(totA);
   return { L, f, tot, sout2, ser, resp, ref, intA, intZ, totA, totZ, NA, NZ: db(totZ), SNR: 94 - NA,
+    NoutA: 10 * Math.log10(outA), NoutZ: 10 * Math.log10(outZ),
     sens: 20 * Math.log10(ref.Sout), gateSens: 20 * Math.log10(Math.sqrt(cabs2(ref.Sg))), fres, peak: best, flf };
 }
 function interpLog(f1, f2, y1, y2, y) { const t = (y - y1) / (y2 - y1); return Math.exp(Math.log(f1) + t * (Math.log(f2) - Math.log(f1))); }
@@ -1004,6 +1009,8 @@ function drawKpis() {
   set("k-snr-d", lastNoMem ? `膜なし比 ${(R.SNR - lastNoMem.SNR >= 0 ? "+" : "")}${(R.SNR - lastNoMem.SNR).toFixed(2)} dB` + (snapshot ? ` · 基準比 ${(R.SNR - snapshot.SNR >= 0 ? "+" : "")}${(R.SNR - snapshot.SNR).toFixed(1)} dB` : "") : snapshot ? `基準比 ${(R.SNR - snapshot.SNR >= 0 ? "+" : "")}${(R.SNR - snapshot.SNR).toFixed(1)} dB` : "94 dB SPL − N_A");
   set("k-ein", `${R.NA.toFixed(1)}<small>dB(A)</small>`);
   set("k-ein-d", `非加重 20–20k: ${R.NZ.toFixed(1)} dB SPL`);
+  set("k-nout", `${R.NoutA.toFixed(1)}<small>dBV(A)</small>`);
+  set("k-nout-d", `非加重 20–20k: ${R.NoutZ.toFixed(1)} dBV`);
   set("k-sens", `${R.sens.toFixed(1)}<small>dBV/Pa</small>`);
   set("k-sens-d", lastNoMem ? `膜の挿入損失 ${(lastNoMem.sens - R.sens).toFixed(2)} dB` : `ゲート点 ${R.gateSens.toFixed(1)} dBV/Pa`);
   set("k-fres", R.fres ? `${(R.fres / 1000).toFixed(1)}<small>kHz</small>` : `–`);

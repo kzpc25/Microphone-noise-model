@@ -88,14 +88,20 @@ aside.rack { background: var(--panel); border: 1px solid var(--line); border-rad
 @media (max-width: 900px) { aside.rack { position: static; max-height: none; } }
 .grp { padding: 12px 14px 10px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 .grp:first-child { border-top: 0; }
+.grp-body { display: grid; gap: 8px; }
+.seg { display: flex; gap: 0; }
+.seg button { flex: 1; border-radius: 0; font-size: 12.5px; padding: 5px 8px; }
+.seg button:first-child { border-radius: 6px 0 0 6px; }
+.seg button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 500; }
 .grp > h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .grp > h3 .eyebrow { font-weight: 400; }
-.prm { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 2px 8px; align-items: center; }
+.prm { display: grid; grid-template-columns: minmax(0, 1fr) 104px; gap: 2px 8px; align-items: center; }
 .prm label { font-size: 12.5px; color: var(--ink-2); min-width: 0; }
 .prm label .sym { font-family: var(--f-mono); color: var(--ink); margin-right: 4px; }
 .prm .box { display: flex; align-items: center; gap: 4px; justify-content: end; }
 .prm input[type="text"] { width: 62px; font-family: var(--f-mono); font-size: 12px; text-align: right; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
-.prm .u { font-size: 10.5px; color: var(--muted); font-family: var(--f-mono); width: 26px; overflow: hidden; white-space: nowrap; }
+.prm .u { font-size: 10.5px; color: var(--muted); font-family: var(--f-mono); width: 38px; overflow: hidden; white-space: nowrap; }
 .prm input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; height: 18px; }
 
 /* Panels */
@@ -285,6 +291,13 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
           <div class="eq">R<sub>h</sub> = 8μt<sub>bp</sub>/(Nπr<sub>h</sub>⁴)　　N = φA/(πr<sub>h</sub>²)</div>
         </details>
         <details open>
+          <summary>1b. 防水音響膜（「あり」のとき）</summary>
+          <p>膜は音源と音孔の間に直列に入ります。膜の振動（質量 M<sub>m</sub> とコンプライアンス C<sub>m</sub> の直列）と、膜を通り抜ける空気の流れ（通気抵抗 R<sub>m</sub>）が並列です。膜とマイクの間の空間は、空気ばね C<sub>g</sub>（対地）と空気の質量 M<sub>g</sub>（直列）で表します。膜の雑音は 4kT·Re(Z<sub>m</sub>) で、音源と同じ位置にあるので、そのまま入力換算値になります。</p>
+          <div class="eq">Z<sub>m</sub> = R<sub>m</sub> ∥ (jωM<sub>m</sub> + 1/jωC<sub>m</sub>)　　R<sub>m</sub> = r<sub>f</sub>/A<sub>m</sub>　　M<sub>m</sub> = 4σ/(3πa<sub>m</sub>²)　　A<sub>m</sub> = πa<sub>m</sub>²,  a<sub>m</sub> = D<sub>m</sub>/2</div>
+          <div class="eq">1/C<sub>m</sub> = 8T<sub>m</sub>/(πa<sub>m</sub>⁴) + 192D/(πa<sub>m</sub>⁶)　　D = E·h³/12(1−ν²),  h = σ/ρ<sub>m</sub>,  ν = 0.4（張力膜＋クランプ板の剛性和）</div>
+          <div class="eq">C<sub>g</sub> = A<sub>m</sub>d<sub>m</sub>/γP<sub>0</sub>　　M<sub>g</sub> = ρd<sub>m</sub>/A<sub>m</sub>　　p<sub>port</sub> = k·p<sub>in</sub>,  k = 1/(1+Z<sub>m</sub>·jωC<sub>g</sub>)</div>
+        </details>
+        <details open>
           <summary>2. 雑音の合成</summary>
           <p>揺動散逸定理により、各音響抵抗 R には直列に圧力雑音源 4kTR [Pa²/Hz] が付きます。2節点（前室・背室）の節点方程式を周波数ごとに解き、ダイアフラム体積速度 U<sub>d</sub> への伝達関数 H<sub>i</sub> を音源からの伝達 H<sub>sig</sub> で割って入力に換算します。電気雑音はゲート点の電圧感度 S<sub>g</sub> で割ります。</p>
           <div class="eq">S<sub>in</sub>(f) = Σ<sub>i</sub> 4kTR<sub>i</sub>·|H<sub>i</sub>/H<sub>sig</sub>|² + [4kT/R<sub>b</sub>·|Z<sub>n</sub>|² + i<sub>n</sub>²|Z<sub>n</sub>|² + e<sub>n</sub>²(1+f<sub>c</sub>/f) + e<sub>o</sub>²/G²] / |S<sub>g</sub>|²</div>
@@ -298,6 +311,7 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
             <li>ダイアフラムは一様変位のピストンとして扱います。クランプ膜では実効面積・実効質量の補正係数が必要です。s<sub>m</sub> は「背室なし・バイアスなし」での平均変位感度と定義しています。</li>
             <li>バイアスによる静的たわみと非線形性は無視し、静電ばね軟化のみ線形化して含めています。V<sub>b</sub> が V<sub>PI</sub> に近いと実機より楽観的になります。</li>
             <li>背室・前室の熱境界層損失（等温/断熱遷移による雑音）と、ダイアフラム自体の構造減衰は含めていません。小背室ではこれらが無視できなくなります。</li>
+            <li>防水膜は第1モードのみの集中定数（張力膜とクランプ板の剛性を足し合わせ）。膜厚は面密度と見かけ密度から求めています。膜–マイク間の空間は内径 D<sub>m</sub> の円柱として扱います。</li>
             <li>デジタルマイクの ΔΣ 変調器・デシメーションは、白色の出力換算雑音 e<sub>o</sub> だけで代表しています。</li>
             <li>物性: 空気は温度 T の理想気体、μ は Sutherland 式、ダイアフラム密度 2330 kg/m³（ポリシリコン）。</li>
           </ul>
@@ -312,6 +326,13 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
 const PARAMS = [
   // id, group, sym, label, unit, min, max, def, log, toSI, digits
   { id: "T", g: "env", sym: "T", lab: "温度", u: "°C", min: -20, max: 85, def: 25, si: 1, d: 0 },
+  { id: "Rf", g: "mem", sym: "r_f", lab: "通気抵抗 (MKS rayls)", u: "rayl", min: 10, max: 1e5, def: 200, log: true, si: 1, d: 0 },
+  { id: "sig", g: "mem", sym: "σ", lab: "面密度 (mass per area)", u: "g/m²", min: 1, max: 100, def: 12, log: true, si: 1e-3, d: 1 },
+  { id: "Tm", g: "mem", sym: "T_m", lab: "張力", u: "N/m", min: 0.1, max: 100, def: 5, log: true, si: 1, d: 2 },
+  { id: "Em", g: "mem", sym: "E", lab: "ヤング率", u: "MPa", min: 1, max: 3000, def: 100, log: true, si: 1e6, d: 0 },
+  { id: "rhom", g: "mem", sym: "ρ_m", lab: "見かけ密度（膜厚の算出用）", u: "g/cm³", min: 0.1, max: 2.5, def: 0.5, si: 1000, d: 2 },
+  { id: "Dm", g: "mem", sym: "D_m", lab: "内径", u: "mm", min: 0.5, max: 5, def: 1.5, si: 1e-3, d: 2 },
+  { id: "dm", g: "mem", sym: "d_m", lab: "マイクと膜(ベント)の距離", u: "mm", min: 0.05, max: 3, def: 0.5, si: 1e-3, d: 2 },
   { id: "rp", g: "port", sym: "r_p", lab: "音孔 半径", u: "µm", min: 50, max: 400, def: 125, si: 1e-6, d: 0 },
   { id: "Lp", g: "port", sym: "L_p", lab: "音孔 長さ", u: "µm", min: 100, max: 1500, def: 400, si: 1e-6, d: 0 },
   { id: "Vf", g: "port", sym: "V_f", lab: "前室 容積", u: "mm³", min: 0.02, max: 2, def: 0.15, log: true, si: 1e-9, d: 3 },
@@ -335,11 +356,12 @@ const PARAMS = [
   { id: "eo", g: "amp", sym: "e_o", lab: "出力換算雑音（ADC等）", u: "nV/√Hz", min: 1, max: 500, def: 20, log: true, si: 1e-9, d: 1 },
 ];
 const GROUPS = {
-  env: ["環境", "Ambient"], port: ["音孔・前室", "Port / front"], dia: ["ダイアフラム", "Diaphragm"],
+  env: ["環境", "Ambient"], mem: ["防水音響膜", "Membrane"], port: ["音孔・前室", "Port / front"], dia: ["ダイアフラム", "Diaphragm"],
   bp: ["バックプレート", "Backplate"], back: ["背室・ベント", "Back volume"], el: ["電気・バイアス", "Bias"],
   amp: ["前置アンプ・ASIC", "Readout"],
 };
 const SOURCES = [
+  { key: "mem", lab: "防水膜 R_m", kind: "ac", c: "--s1", dash: "6 3", mem: true },
   { key: "port", lab: "音孔 R_p", kind: "ac", c: "--s1" },
   { key: "sq", lab: "スクイーズ膜 R_sq", kind: "ac", c: "--s2" },
   { key: "hole", lab: "バックプレート孔 R_h", kind: "ac", c: "--s3" },
@@ -350,6 +372,8 @@ const SOURCES = [
   { key: "eo", lab: "出力雑音 e_o", kind: "el", c: "--s8" },
 ];
 
+let memOn = false;
+const activeSources = () => SOURCES.filter((s) => !s.mem || memOn);
 const cx = (re, im = 0) => ({ re, im });
 const cadd = (a, b) => ({ re: a.re + b.re, im: a.im + b.im });
 const csub = (a, b) => ({ re: a.re - b.re, im: a.im - b.im });
@@ -358,7 +382,7 @@ const cdiv = (a, b) => { const d = b.re * b.re + b.im * b.im; return { re: (a.re
 const cinv = (a) => cdiv(cx(1), a);
 const cabs2 = (a) => a.re * a.re + a.im * a.im;
 
-const kB = 1.380649e-23, EPS0 = 8.8541878128e-12, P0 = 101325, RAIR = 287.05, GAMMA = 1.4, RHO_SI = 2330, PREF = 20e-6;
+const kB = 1.380649e-23, EPS0 = 8.8541878128e-12, P0 = 101325, RAIR = 287.05, GAMMA = 1.4, RHO_SI = 2330, PREF = 20e-6, NU_M = 0.4;
 
 function lumped(v) {
   const p = {};
@@ -389,14 +413,36 @@ function lumped(v) {
   const Cf = p.Vf / gP0, Cbv = p.Vb / gP0;
   const Ctot = C0 + p.Cp + p.Ci;
   const G = Math.pow(10, p.G / 20);
-  return { p, T, rho, mu, muEff, Kn, lam, A, C0, km, ke, VPI, keff, Cd, Md, N, B, Rsq, Rh, Mh, Mp, Rp0, Rp1, Cf, Cbv, Ctot, G,
+  // waterproof membrane: (M_m + C_m) series, in parallel with flow resistance R_m; then the gap cavity (C_g shunt, M_g series)
+  const mem = !!v.memOn;
+  const am = p.Dm / 2, Am = Math.PI * am * am;
+  const Rm = p.Rf / Am;
+  const Mm = 4 * p.sig / (3 * Math.PI * am * am);
+  const Cten = Math.PI * Math.pow(am, 4) / (8 * p.Tm);
+  const hm = p.sig / p.rhom;
+  const Dbend = p.Em * hm ** 3 / (12 * (1 - NU_M * NU_M));
+  const Cbend = Math.PI * Math.pow(am, 6) / (192 * Dbend);
+  const Cm = 1 / (1 / Cten + 1 / Cbend);
+  const Cg = Am * p.dm / gP0, Mg = rho * p.dm / Am;
+  return { mem, Am, Rm, Mm, Cten, hm, Dbend, Cbend, Cm, Cg, Mg, fm: 1 / (2 * Math.PI * Math.sqrt(Mm * Cm)),
+    p, T, rho, mu, muEff, Kn, lam, A, C0, km, ke, VPI, keff, Cd, Md, N, B, Rsq, Rh, Mh, Mp, Rp0, Rp1, Cf, Cbv, Ctot, G,
     collapsed: ke >= km || p.Vbias >= VPI };
 }
 
 function point(L, f) {
   const p = L.p, w = 2 * Math.PI * f, kT4 = 4 * kB * L.T;
   const Rp = Math.hypot(L.Rp0, L.Rp1 * Math.sqrt(w));
-  const Yp = cinv(cx(Rp, w * L.Mp));
+  // front network seen from the port inlet: Thevenin source k·p_in behind impedance Zth
+  let Zth = cx(Rp, w * L.Mp), k = cx(1), memS = 0;
+  if (L.mem) {
+    const Zlc = cx(0, w * L.Mm - 1 / (w * L.Cm));
+    const Zm = cdiv(cmul(cx(L.Rm), Zlc), cadd(cx(L.Rm), Zlc));
+    const den = cadd(cx(1), cmul(Zm, cx(0, w * L.Cg)));
+    k = cinv(den);
+    Zth = cadd(Zth, cadd(cdiv(Zm, den), cx(0, w * L.Mg)));
+    memS = kT4 * Zm.re; // R ∥ (L+C): Thevenin noise 4kT·Re(Zm), same path as p_in
+  }
+  const Yp = cinv(Zth);
   const Yf = cx(0, w * L.Cf), Yb = cx(0, w * L.Cbv);
   const Zd = cx(L.Rsq + L.Rh, w * (L.Md + L.Mh) - 1 / (w * L.Cd));
   const Yd = cinv(Zd), Yv = cx(1 / p.Rv);
@@ -409,7 +455,7 @@ function point(L, f) {
     return csub(pA, pB);
   };
   // signal: p_s = 1
-  const Hs = cmul(Yd, solve(Yp, cx(0)));
+  const Hs = cmul(k, cmul(Yd, solve(Yp, cx(0))));
   // diaphragm-branch series source (R_sq, R_h)
   const Hd = cmul(Yd, cadd(solve(cmul(cx(-1), Yd), Yd), cx(1)));
   // vent series source
@@ -421,7 +467,8 @@ function point(L, f) {
   const Sg = cmul(Hs, cmul(cx(p.Vbias * L.C0 / (p.g0 * L.A)), Zn));
   const sg2 = cabs2(Sg), zn2 = cabs2(Zn);
   const s = {
-    port: kT4 * Rp,
+    mem: memS,
+    port: kT4 * Rp / cabs2(k),
     sq: kT4 * L.Rsq * rd,
     hole: kT4 * L.Rh * rd,
     vent: kT4 * p.Rv * rv,
@@ -517,19 +564,34 @@ function buildRack() {
   for (const g in GROUPS) {
     const sec = document.createElement("div"); sec.className = "grp";
     sec.innerHTML = `<h3><span>${GROUPS[g][0]}</span><span class="eyebrow">${GROUPS[g][1]}</span></h3>`;
+    let body = sec;
+    if (g === "mem") {
+      sec.insertAdjacentHTML("beforeend", `<div class="seg" role="group" aria-label="防水音響膜の有無">
+        <button type="button" id="mem-off" aria-pressed="true">なし</button><button type="button" id="mem-on" aria-pressed="false">あり（マイク前に設置）</button></div>
+        <div class="grp-body" id="mem-body" hidden></div>`);
+      body = sec.querySelector("#mem-body");
+      const setMem = (on) => {
+        memOn = on; val.memOn = on ? 1 : 0;
+        sec.querySelector("#mem-on").setAttribute("aria-pressed", String(on));
+        sec.querySelector("#mem-off").setAttribute("aria-pressed", String(!on));
+        body.hidden = !on; buildLegend(); update();
+      };
+      sec.querySelector("#mem-on").addEventListener("click", () => setMem(true));
+      sec.querySelector("#mem-off").addEventListener("click", () => setMem(false));
+    }
     for (const q of PARAMS.filter((q) => q.g === g)) {
       const row = document.createElement("div"); row.className = "prm";
       const tr = (x) => q.log ? Math.log10(x) : x;
       row.innerHTML = `<label for="r-${q.id}"><span class="sym">${fmtSym(q.sym)}</span>${q.lab}</label>
         <span class="box"><input type="text" id="t-${q.id}" inputmode="decimal" aria-label="${q.lab} (${q.u})"><span class="u" title="${q.u}">${q.u}</span></span>
         <input type="range" id="r-${q.id}" min="${tr(q.min)}" max="${tr(q.max)}" step="${q.log ? 0.005 : (q.max - q.min) / 400}">`;
-      sec.appendChild(row);
+      body.appendChild(row);
       const r = row.querySelector("input[type=range]"), t = row.querySelector("input[type=text]");
-      r.addEventListener("input", () => { val[q.id] = q.log ? 10 ** +r.value : +r.value; t.value = fmtNum(val[q.id], q); markPreset(null); update(); });
+      r.addEventListener("input", () => { val[q.id] = q.log ? 10 ** +r.value : +r.value; t.value = fmtNum(val[q.id], q); if (q.g !== "mem") markPreset(null); update(); });
       t.addEventListener("change", () => {
         let x = parseFloat(t.value.replace(/×10\^?/, "e"));
         if (!isFinite(x)) { t.value = fmtNum(val[q.id], q); return; }
-        x = Math.min(q.max, Math.max(q.min, x)); val[q.id] = x; syncInput(q); markPreset(null); update();
+        x = Math.min(q.max, Math.max(q.min, x)); val[q.id] = x; syncInput(q); if (q.g !== "mem") markPreset(null); update();
       });
     }
     rack.appendChild(sec);
@@ -540,7 +602,8 @@ function syncInput(q) {
   document.getElementById("t-" + q.id).value = fmtNum(val[q.id], q);
 }
 function applyPreset(name) {
-  for (const q of PARAMS) { val[q.id] = PRESETS[name][q.id] ?? q.def; syncInput(q); }
+  // presets describe the microphone only; the membrane keeps whatever the user set
+  for (const q of PARAMS) { if (!(q.g === "mem" && val[q.id] !== undefined)) val[q.id] = PRESETS[name][q.id] ?? q.def; syncInput(q); }
   markPreset(name); update();
 }
 function markPreset(name) {
@@ -552,10 +615,11 @@ let snapshot = null, last = null;
 
 function buildLegend() {
   const lg = document.getElementById("legend");
-  const items = [{ key: "total", lab: "合計", c: "--ink" }, ...SOURCES];
+  lg.innerHTML = "";
+  const items = [{ key: "total", lab: "合計", c: "--ink" }, ...activeSources()];
   for (const s of items) {
     const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-pressed", "true");
-    const k = document.createElement("span"); k.className = "key"; k.style.color = `var(${s.c})`;
+    const k = document.createElement("span"); k.className = "key" + (s.dash ? " dash" : ""); k.style.color = `var(${s.c})`;
     if (s.key === "total") k.style.borderTopWidth = "3px";
     b.appendChild(k); b.appendChild(document.createTextNode(s.lab));
     b.addEventListener("click", () => {
@@ -713,7 +777,7 @@ function drawNoise() {
   const R = last;
   const series = [];
   if (snapshot) series.push({ label: "基準", y: snapshot.tot, color: css("--muted"), w: 1.5, dash: "5 4" });
-  for (const s of SOURCES) if (!hidden.has(s.key)) series.push({ label: s.lab, y: toDbV(R.ser[s.key], R.sout2), color: css(s.c), w: 1.6 });
+  for (const s of activeSources()) if (!hidden.has(s.key)) series.push({ label: s.lab, y: toDbV(R.ser[s.key], R.sout2), color: css(s.c), w: 1.6, dash: s.dash });
   if (!hidden.has("total")) series.push({ label: "合計", y: toDbV(R.tot, R.sout2), color: css("--ink"), w: 2.6 });
   let y0, y1;
   if (yView.noise) ({ y0, y1 } = yView.noise);
@@ -744,24 +808,26 @@ function drawResp() {
   logChart(document.getElementById("c-resp"), { f: R.f, x0: 10, x1: 1e5, y0, y1, h: 260, band: [20, 20000], series, yu: "dB", aria: "感度の周波数特性" });
 }
 
+// a dashed series (membrane) shares a hue with its neighbour, so its fills are striped
+const stripe = (s) => s.dash ? `repeating-linear-gradient(135deg, var(${s.c}) 0 3px, var(--panel) 3px 5px)` : `var(${s.c})`;
 function drawBars() {
   const R = last;
-  const rows = SOURCES.map((s) => ({ ...s, A: R.intA[s.key], share: R.intA[s.key] / R.totA })).sort((a, b) => b.A - a.A);
+  const rows = activeSources().map((s) => ({ ...s, A: R.intA[s.key], share: R.intA[s.key] / R.totA })).sort((a, b) => b.A - a.A);
   const bars = document.getElementById("bars"); bars.innerHTML = "";
   for (const r of rows) {
     const el = document.createElement("div"); el.className = "bar";
     const lab = document.createElement("div"); lab.className = "lab";
-    const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = `var(${r.c})`;
+    const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = stripe(r);
     const t = document.createElement("span"); t.textContent = r.lab; lab.append(sw, t);
     const tr = document.createElement("div"); tr.className = "track";
-    const fl = document.createElement("div"); fl.className = "fill"; fl.style.background = `var(${r.c})`; fl.style.width = (r.share * 100).toFixed(2) + "%";
+    const fl = document.createElement("div"); fl.className = "fill"; fl.style.background = stripe(r); fl.style.width = (r.share * 100).toFixed(2) + "%";
     tr.appendChild(fl);
     const v = document.createElement("div"); v.className = "val";
     v.innerHTML = `${(10 * Math.log10(r.A / PREF / PREF)).toFixed(1)} <em>${(r.share * 100).toFixed(1)}%</em>`;
     tr.title = `${r.lab}: パワー比 ${(r.share * 100).toFixed(1)}%`;
     el.append(lab, tr, v); bars.appendChild(el);
   }
-  let ac = 0; for (const s of SOURCES) if (s.kind === "ac") ac += R.intA[s.key];
+  let ac = 0; for (const s of activeSources()) if (s.kind === "ac") ac += R.intA[s.key];
   const fa = ac / R.totA;
   const sp = document.getElementById("split");
   sp.innerHTML = `<div style="width:${(fa * 100).toFixed(2)}%;background:var(--accent)"></div><div style="flex:1;background:var(--muted)"></div>`;
@@ -772,9 +838,9 @@ function drawBars() {
 function drawTable() {
   const R = last;
   const p1k = point(R.L, 1000);
-  const rows = SOURCES.map((s) => {
+  const rows = activeSources().map((s) => {
     const d1k = 10 * Math.log10(p1k.s[s.key] / PREF / PREF);
-    return `<tr><td><span class="key" style="color:var(${s.c})"></span> ${s.lab}</td><td>${s.kind === "ac" ? "音響" : "電気"}</td><td class="n">${d1k.toFixed(1)}</td><td class="n">${(10 * Math.log10(R.intZ[s.key] / PREF / PREF)).toFixed(1)}</td><td class="n">${(10 * Math.log10(R.intA[s.key] / PREF / PREF)).toFixed(1)}</td><td class="n">${(R.intA[s.key] / R.totA * 100).toFixed(1)}%</td></tr>`;
+    return `<tr><td><span class="key${s.dash ? " dash" : ""}" style="color:var(${s.c})"></span> ${s.lab}</td><td>${s.kind === "ac" ? "音響" : "電気"}</td><td class="n">${d1k.toFixed(1)}</td><td class="n">${(10 * Math.log10(R.intZ[s.key] / PREF / PREF)).toFixed(1)}</td><td class="n">${(10 * Math.log10(R.intA[s.key] / PREF / PREF)).toFixed(1)}</td><td class="n">${(R.intA[s.key] / R.totA * 100).toFixed(1)}%</td></tr>`;
   }).join("");
   document.getElementById("tbl").innerHTML = `<thead><tr><th>雑音源</th><th>領域</th><th class="n">@1 kHz<br>dB SPL/√Hz</th><th class="n">20–20k<br>dB SPL</th><th class="n">A特性<br>dB(A)</th><th class="n">A特性<br>寄与</th></tr></thead><tbody>${rows}
   <tr><td><b>合計</b></td><td></td><td class="n"><b>${(10 * Math.log10(p1k.tot / PREF / PREF)).toFixed(1)}</b></td><td class="n"><b>${R.NZ.toFixed(1)}</b></td><td class="n"><b>${R.NA.toFixed(1)}</b></td><td class="n">100%</td></tr></tbody>`;
@@ -806,6 +872,20 @@ function drawDerived() {
     ["バイアス高域通過 f", fHz(1 / (2 * Math.PI * L.p.Rb * L.Ctot))],
     ["変位感度 @1 kHz", (last.ref.x * 1e9).toFixed(2) + " nm/Pa"],
   ];
+  if (L.mem) items.push(
+    ["膜 有効面積 A_m", eng(L.Am * 1e6, "mm²")],
+    ["膜 通気抵抗 R_m = r_f/A_m", sci(L.Rm) + " Pa·s/m³"],
+    ["膜 音響質量 M_m = 4σ/3πa²", sci(L.Mm) + " kg/m⁴"],
+    ["膜厚 h = σ/ρ_m", (L.hm * 1e6).toFixed(1) + " µm"],
+    ["張力コンプライアンス πa⁴/8T", sci(L.Cten) + " m³/Pa"],
+    ["曲げコンプライアンス πa⁶/192D", sci(L.Cbend) + " m³/Pa"],
+    ["膜 合成コンプライアンス C_m", sci(L.Cm) + " m³/Pa"],
+    ["膜 共振 f_m (L–C)", fHz(L.fm)],
+    ["膜–マイク間 C_g", sci(L.Cg) + " m³/Pa"],
+    ["膜–マイク間 M_g", sci(L.Mg) + " kg/m⁴"],
+    ["膜の挿入損失 @1 kHz", (lastNoMem.sens - last.sens).toFixed(2) + " dB"],
+    ["膜による SNR 変化", (last.SNR - lastNoMem.SNR).toFixed(2) + " dB"],
+  );
   document.getElementById("derived").innerHTML = items.map(([a, b]) => `<div><span>${a}</span><span>${b}</span></div>`).join("");
 }
 
@@ -816,7 +896,7 @@ function schemAcoustic() {
   let s = "";
   const w = (x1, y1, x2, y2) => (s += `<line class="w" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`);
   const t = (x, y, txt, cls = "", anchor = "middle") => (s += `<text x="${x}" y="${y}" text-anchor="${anchor}" class="${cls}">${txt}</text>`);
-  const res = (x0, x1, y, k, sym, v) => { s += `<rect class="el el-n" x="${x0}" y="${y - 9}" width="${x1 - x0}" height="18" rx="2" style="stroke:${col(k)}"/>`; t((x0 + x1) / 2, y - 16, sym); t((x0 + x1) / 2, y + 24, v, "v"); };
+  const res = (x0, x1, y, k, sym, v) => { s += `<rect class="el el-n" x="${x0}" y="${y - 9}" width="${x1 - x0}" height="18" rx="2" style="stroke:${col(k)}${k === "mem" ? ";stroke-dasharray:4 2" : ""}"/>`; t((x0 + x1) / 2, y - 16, sym); t((x0 + x1) / 2, y + 24, v, "v"); };
   const ind = (x0, x1, y, sym, v) => { const n = 4, dw = (x1 - x0) / n; let d = `M${x0} ${y}`; for (let i = 0; i < n; i++) d += ` a${dw / 2} ${dw / 2} 0 0 1 ${dw} 0`; s += `<path d="${d}" class="w" style="stroke:var(--ink);stroke-width:1.7"/>`; t((x0 + x1) / 2, y - 16, sym); t((x0 + x1) / 2, y + 24, v, "v"); };
   const capS = (x, y, sym, v) => { s += `<line class="w" style="stroke:var(--ink);stroke-width:2" x1="${x - 4}" y1="${y - 13}" x2="${x - 4}" y2="${y + 13}"/><line class="w" style="stroke:var(--ink);stroke-width:2" x1="${x + 4}" y1="${y - 13}" x2="${x + 4}" y2="${y + 13}"/>`; t(x, y - 18, sym); t(x, y + 28, v, "v"); };
   const capV = (x, y, sym, v) => { s += `<line class="w" style="stroke:var(--ink);stroke-width:2" x1="${x - 14}" y1="${y - 4}" x2="${x + 14}" y2="${y - 4}"/><line class="w" style="stroke:var(--ink);stroke-width:2" x1="${x - 14}" y1="${y + 4}" x2="${x + 14}" y2="${y + 4}"/>`; t(x + 20, y, sym, "", "start"); t(x + 20, y + 15, v, "v", "start"); };
@@ -825,6 +905,7 @@ function schemAcoustic() {
   w(50, yT, 50, 152); w(50, 184, 50, yG);
   s += `<circle class="el" cx="50" cy="168" r="16"/><path d="M41 168 q4.5 -9 9 0 t9 0" class="w" style="stroke:var(--ink)"/>`;
   t(28, 172, "p_in", "", "end"); t(50, 210, "音源", "g");
+  const head = s; s = "";
   // port
   w(50, yT, 90, yT); res(90, 146, yT, "port", "R_p", sci(L.Rp0, 1)); w(146, yT, 172, yT);
   ind(172, 224, yT, "M_p", sci(L.Mp, 1)); w(224, yT, 262, yT);
@@ -856,7 +937,22 @@ function schemAcoustic() {
   s += `<path class="arrl" d="M790 ${yT + 60} h70"/><path class="arr" d="M866 ${yT + 60} l-8 -4.5 v9 z"/>`;
   t(828, yT + 50, "x = U_d / jωA", "", "middle");
   t(828, yT + 80, "電気系へ", "g");
-  return `<svg viewBox="0 0 900 262" role="img" aria-label="MEMSマイクの音響等価回路">${s.replace(/([A-Za-z])_([A-Za-z]+)/g, (m0, a, b) => `${a}<tspan baseline-shift="sub" font-size="9">${b}</tspan>`)}</svg>`;
+  // waterproof membrane in front of the port: (M_m–C_m) ∥ R_m, then gap cavity C_g / M_g
+  const OX = L.mem ? 260 : 0, body = s; s = "";
+  if (L.mem) {
+    const y1 = yT - 34, y2 = yT + 34;
+    w(50, yT, 80, yT); w(80, y1, 80, y2); w(230, y1, 230, y2); dot(80, yT); dot(230, yT);
+    w(80, y1, 100, y1); ind(100, 146, y1, "M_m", sci(L.Mm, 1)); w(146, y1, 176, y1); capS(180, y1, "C_m", sci(L.Cm, 1)); w(184, y1, 230, y1);
+    w(80, y2, 125, y2); res(125, 185, y2, "mem", "R_m", sci(L.Rm, 1)); w(185, y2, 230, y2);
+    s += `<path class="brk" d="M80 176 v6 h150 v-6"/>`; t(155, 196, "防水音響膜", "g");
+    w(230, yT, 262, yT); dot(262, yT);
+    w(262, yT, 262, 164); capV(262, 168, "C_g", sci(L.Cg, 1)); w(262, 172, 262, yG);
+    w(262, yT, 270, yT); ind(270, 300, yT, "M_g", ""); w(300, yT, 50 + OX, yT);
+    t(262, 254, "膜–マイク間", "g");
+    w(50, yG, 50 + OX, yG);
+  }
+  s = head + s + `<g transform="translate(${OX},0)">${body}</g>`;
+  return `<svg viewBox="0 0 ${900 + OX} 262" style="min-width:${Math.round(760 * (900 + OX) / 900)}px" role="img" aria-label="MEMSマイクの音響等価回路">${s.replace(/([A-Za-z])_([A-Za-z]+)/g, (m0, a, b) => `${a}<tspan baseline-shift="sub" font-size="9">${b}</tspan>`)}</svg>`;
 }
 function schemElectrical() {
   const L = last.L, p = L.p, yT = 70, yG = 196;
@@ -905,11 +1001,11 @@ function drawKpis() {
   const R = last, L = R.L;
   const set = (id, html) => (document.getElementById(id).innerHTML = html);
   set("k-snr", `${R.SNR.toFixed(1)}<small>dB</small>`);
-  set("k-snr-d", snapshot ? `基準比 ${(R.SNR - snapshot.SNR >= 0 ? "+" : "")}${(R.SNR - snapshot.SNR).toFixed(1)} dB` : "94 dB SPL − N_A");
+  set("k-snr-d", lastNoMem ? `膜なし比 ${(R.SNR - lastNoMem.SNR >= 0 ? "+" : "")}${(R.SNR - lastNoMem.SNR).toFixed(2)} dB` + (snapshot ? ` · 基準比 ${(R.SNR - snapshot.SNR >= 0 ? "+" : "")}${(R.SNR - snapshot.SNR).toFixed(1)} dB` : "") : snapshot ? `基準比 ${(R.SNR - snapshot.SNR >= 0 ? "+" : "")}${(R.SNR - snapshot.SNR).toFixed(1)} dB` : "94 dB SPL − N_A");
   set("k-ein", `${R.NA.toFixed(1)}<small>dB(A)</small>`);
   set("k-ein-d", `非加重 20–20k: ${R.NZ.toFixed(1)} dB SPL`);
   set("k-sens", `${R.sens.toFixed(1)}<small>dBV/Pa</small>`);
-  set("k-sens-d", `ゲート点 ${R.gateSens.toFixed(1)} dBV/Pa`);
+  set("k-sens-d", lastNoMem ? `膜の挿入損失 ${(lastNoMem.sens - R.sens).toFixed(2)} dB` : `ゲート点 ${R.gateSens.toFixed(1)} dBV/Pa`);
   set("k-fres", R.fres ? `${(R.fres / 1000).toFixed(1)}<small>kHz</small>` : `–`);
   set("k-fres-d", R.fres ? `ピーク +${R.peak.toFixed(1)} dB` : "100 kHz 以下にピークなし");
   set("k-flf", R.flf ? `${R.flf.toFixed(1)}<small>Hz</small>` : `&lt;10<small>Hz</small>`);
@@ -923,12 +1019,13 @@ function drawKpis() {
   else wb.hidden = true;
 }
 
-let raf = 0;
+let raf = 0, lastNoMem = null;
 function update() {
   if (raf) return;
   raf = requestAnimationFrame(() => {
     raf = 0;
     last = simulate(val);
+    lastNoMem = memOn ? simulate({ ...val, memOn: 0 }) : null;
     drawKpis(); drawNoise(); drawResp(); drawBars(); drawTable(); drawDerived();
     document.getElementById("sch-ac").innerHTML = schemAcoustic();
     document.getElementById("sch-el").innerHTML = schemElectrical();

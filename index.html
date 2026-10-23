@@ -71,6 +71,7 @@ button.on { background: var(--accent-soft); border-color: var(--accent); color: 
 /* KPI strip */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .kpi { background: var(--panel); padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.kpi .eyebrow { text-transform: none; letter-spacing: 0.04em; }
 .kpi .v { font-family: var(--f-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .kpi .v small { font-size: 12px; color: var(--ink-2); font-weight: 400; margin-left: 3px; }
 .kpi .d { font-size: 11px; color: var(--muted); font-family: var(--f-mono); }
@@ -207,7 +208,8 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
   <section class="kpis" aria-label="主要結果">
     <div class="kpi lead"><span class="eyebrow">SNR (94 dB SPL, A特性)</span><span class="v" id="k-snr">–</span><span class="d" id="k-snr-d"></span></div>
     <div class="kpi"><span class="eyebrow">等価入力雑音 EIN</span><span class="v" id="k-ein">–</span><span class="d" id="k-ein-d"></span></div>
-    <div class="kpi"><span class="eyebrow">出力ノイズフロア (A)</span><span class="v" id="k-nout">–</span><span class="d" id="k-nout-d"></span></div>
+    <div class="kpi"><span class="eyebrow">出力ノイズフロア (A) 20 Hz–20 kHz</span><span class="v" id="k-nout">–</span><span class="d" id="k-nout-d"></span></div>
+    <div class="kpi"><span class="eyebrow">出力ノイズフロア (A) 100 Hz–10 kHz</span><span class="v" id="k-nband">–</span><span class="d" id="k-nband-d"></span></div>
     <div class="kpi"><span class="eyebrow">感度 @1 kHz</span><span class="v" id="k-sens">–</span><span class="d" id="k-sens-d"></span></div>
     <div class="kpi"><span class="eyebrow">共振周波数</span><span class="v" id="k-fres">–</span><span class="d" id="k-fres-d"></span></div>
     <div class="kpi"><span class="eyebrow">低域 −3 dB</span><span class="v" id="k-flf">–</span><span class="d" id="k-flf-d"></span></div>
@@ -524,6 +526,18 @@ function simulate(v) {
     }
     prev = cur;
   }
+  // output noise in the 100 Hz–10 kHz band (A-weighted and flat)
+  let bandA = 0, bandZ = 0, pb = null;
+  for (let j = 0, mb = 400; j < mb; j++) {
+    const fj = 100 * Math.pow(100, j / (mb - 1));
+    const r = point(L, fj), cur = { f: fj, wA: aWeight2(fj), o2: r.tot * r.Sout * r.Sout };
+    if (pb) {
+      const df = fj - pb.f;
+      bandA += 0.5 * df * (cur.o2 * cur.wA + pb.o2 * pb.wA);
+      bandZ += 0.5 * df * (cur.o2 + pb.o2);
+    }
+    pb = cur;
+  }
   // resonance: peak above 2 kHz
   let ip = 0, best = -1e9;
   for (let i = 0; i < n; i++) if (f[i] > 2000 && resp[i] > best) { best = resp[i]; ip = i; }
@@ -534,6 +548,7 @@ function simulate(v) {
   const NA = db(totA);
   return { L, f, tot, sout2, ser, resp, ref, intA, intZ, totA, totZ, NA, NZ: db(totZ), SNR: 94 - NA,
     NoutA: 10 * Math.log10(outA), NoutZ: 10 * Math.log10(outZ),
+    NbandA: 10 * Math.log10(bandA), NbandZ: 10 * Math.log10(bandZ),
     sens: 20 * Math.log10(ref.Sout), gateSens: 20 * Math.log10(Math.sqrt(cabs2(ref.Sg))), fres, peak: best, flf };
 }
 function interpLog(f1, f2, y1, y2, y) { const t = (y - y1) / (y2 - y1); return Math.exp(Math.log(f1) + t * (Math.log(f2) - Math.log(f1))); }
@@ -1010,7 +1025,9 @@ function drawKpis() {
   set("k-ein", `${R.NA.toFixed(1)}<small>dB(A)</small>`);
   set("k-ein-d", `非加重 20–20k: ${R.NZ.toFixed(1)} dB SPL`);
   set("k-nout", `${R.NoutA.toFixed(1)}<small>dBV(A)</small>`);
-  set("k-nout-d", `非加重 20–20k: ${R.NoutZ.toFixed(1)} dBV`);
+  set("k-nout-d", `非加重: ${R.NoutZ.toFixed(1)} dBV`);
+  set("k-nband", `${R.NbandA.toFixed(1)}<small>dBV(A)</small>`);
+  set("k-nband-d", `非加重: ${R.NbandZ.toFixed(1)} dBV`);
   set("k-sens", `${R.sens.toFixed(1)}<small>dBV/Pa</small>`);
   set("k-sens-d", lastNoMem ? `膜の挿入損失 ${(lastNoMem.sens - R.sens).toFixed(2)} dB` : `ゲート点 ${R.gateSens.toFixed(1)} dBV/Pa`);
   set("k-fres", R.fres ? `${(R.fres / 1000).toFixed(1)}<small>kHz</small>` : `–`);

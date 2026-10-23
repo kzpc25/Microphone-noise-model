@@ -208,8 +208,8 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); }
 
       <section class="panel">
         <div class="panel-head">
-          <h2>入力換算ノイズスペクトル</h2>
-          <p>dB SPL/√Hz（0 dB = 20 µPa/√Hz）・網掛けは可聴帯域 20 Hz–20 kHz</p>
+          <h2>出力ノイズスペクトル</h2>
+          <p>dBV/√Hz（ASIC出力、0 dB = 1 V/√Hz）・入力換算ノイズ × 出力感度 |S(f)|²・網掛けは可聴帯域 20 Hz–20 kHz</p>
         </div>
         <div class="legend" id="legend"></div>
         <div class="chart" id="c-noise"></div>
@@ -425,13 +425,13 @@ function aWeight2(f) {
 function simulate(v) {
   const L = lumped(v);
   const n = 481, fmin = 10, fmax = 1e5;
-  const f = new Float64Array(n), tot = new Float64Array(n), resp = new Float64Array(n);
+  const f = new Float64Array(n), tot = new Float64Array(n), resp = new Float64Array(n), sout2 = new Float64Array(n);
   const ser = {}; for (const s of SOURCES) ser[s.key] = new Float64Array(n);
   const ref = point(L, 1000);
   for (let i = 0; i < n; i++) {
     const fi = fmin * Math.pow(fmax / fmin, i / (n - 1));
     const r = point(L, fi);
-    f[i] = fi; tot[i] = r.tot;
+    f[i] = fi; tot[i] = r.tot; sout2[i] = r.Sout * r.Sout;
     for (const k in r.s) ser[k][i] = r.s[k];
     resp[i] = 20 * Math.log10(r.Sout / ref.Sout);
   }
@@ -462,7 +462,7 @@ function simulate(v) {
   for (let i = 0; i < n && f[i] < 1000; i++) if (resp[i] >= -3) { flf = i === 0 ? null : interpLog(f[i - 1], f[i], resp[i - 1], resp[i], -3); break; }
   const db = (x) => 10 * Math.log10(x / (PREF * PREF));
   const NA = db(totA);
-  return { L, f, tot, ser, resp, ref, intA, intZ, totA, totZ, NA, NZ: db(totZ), SNR: 94 - NA,
+  return { L, f, tot, sout2, ser, resp, ref, intA, intZ, totA, totZ, NA, NZ: db(totZ), SNR: 94 - NA,
     sens: 20 * Math.log10(ref.Sout), gateSens: 20 * Math.log10(Math.sqrt(cabs2(ref.Sg))), fres, peak: best, flf };
 }
 function interpLog(f1, f2, y1, y2, y) { const t = (y - y1) / (y2 - y1); return Math.exp(Math.log(f1) + t * (Math.log(f2) - Math.log(f1))); }
@@ -567,12 +567,11 @@ function logChart(host, cfg) {
       if (k === 1) g += `<text x="${lx(f)}" y="${H - 10}" text-anchor="middle">${f >= 1000 ? f / 1000 + "k" : f}</text>`;
     }
   }
-  g += `<text x="${lx(cfg.x1)}" y="${H - 10}" text-anchor="end">${cfg.x1 >= 1000 ? cfg.x1 / 1000 + "k" : cfg.x1}</text>`;
+  g += `<text x="${lx(cfg.x1)}" y="${H - 10}" text-anchor="end">${cfg.x1 >= 1000 ? cfg.x1 / 1000 + "k" : cfg.x1} Hz</text>`;
   for (let y = cfg.y0; y <= cfg.y1 + 1e-9; y += cfg.dy) {
     g += `<line class="gl${y === 0 ? " major" : ""}" x1="${m.l}" x2="${m.l + iw}" y1="${ly(y)}" y2="${ly(y)}"/>`;
     g += `<text x="${m.l - 6}" y="${ly(y) + 4}" text-anchor="end">${y}</text>`;
   }
-  g += `<text x="${m.l + iw}" y="${m.t + ih + 18 + 2}" text-anchor="end" style="font-size:10px">Hz</text>`;
   g += `<text x="${m.l - 6}" y="${m.t - 10}" text-anchor="end" style="font-size:10px">${cfg.yu}</text>`;
   for (const s of cfg.series) {
     let d = "";
@@ -620,18 +619,20 @@ function logChart(host, cfg) {
 }
 
 const toDb = (arr) => Array.from(arr, (x) => 10 * Math.log10(x / (PREF * PREF)));
+// output-referred: input-referred Pa²/Hz × |S_out|² → V²/Hz
+const toDbV = (arr, sout2) => Array.from(arr, (x, i) => 10 * Math.log10(x * sout2[i]));
 
 function drawNoise() {
   if (!last) return;
   const R = last;
   const series = [];
   if (snapshot) series.push({ label: "基準", y: snapshot.tot, color: css("--muted"), w: 1.5, dash: "5 4" });
-  for (const s of SOURCES) if (!hidden.has(s.key)) series.push({ label: s.lab, y: toDb(R.ser[s.key]), color: css(s.c), w: 1.6 });
-  if (!hidden.has("total")) series.push({ label: "合計", y: toDb(R.tot), color: css("--ink"), w: 2.6 });
-  const tdb = toDb(R.tot);
+  for (const s of SOURCES) if (!hidden.has(s.key)) series.push({ label: s.lab, y: toDbV(R.ser[s.key], R.sout2), color: css(s.c), w: 1.6 });
+  if (!hidden.has("total")) series.push({ label: "合計", y: toDbV(R.tot, R.sout2), color: css("--ink"), w: 2.6 });
+  const tdb = toDbV(R.tot, R.sout2);
   let mx = -1e9; for (let i = 0; i < R.f.length; i++) if (R.f[i] < 30000) mx = Math.max(mx, tdb[i]);
   const y1 = Math.ceil((mx + 6) / 10) * 10;
-  logChart(document.getElementById("c-noise"), { f: R.f, x0: 10, x1: 1e5, y0: y1 - 70, y1, dy: 10, h: 340, band: [20, 20000], series, yu: "dB", aria: "入力換算ノイズ密度の周波数特性" });
+  logChart(document.getElementById("c-noise"), { f: R.f, x0: 10, x1: 1e5, y0: y1 - 70, y1, dy: 10, h: 340, band: [20, 20000], series, yu: "dBV", aria: "出力ノイズ密度の周波数特性 (dBV/√Hz)" });
 }
 function drawResp() {
   const R = last;
@@ -839,7 +840,7 @@ document.getElementById("pre-hi").addEventListener("click", () => applyPreset("h
 document.getElementById("pre-small").addEventListener("click", () => applyPreset("small"));
 document.getElementById("snap").addEventListener("click", (e) => {
   if (snapshot) { snapshot = null; e.currentTarget.textContent = "基準として固定"; e.currentTarget.classList.remove("on"); }
-  else { snapshot = { tot: toDb(last.tot), resp: Array.from(last.resp), SNR: last.SNR }; e.currentTarget.textContent = "基準を解除"; e.currentTarget.classList.add("on"); }
+  else { snapshot = { tot: toDbV(last.tot, last.sout2), resp: Array.from(last.resp), SNR: last.SNR }; e.currentTarget.textContent = "基準を解除"; e.currentTarget.classList.add("on"); }
   drawKpis(); drawNoise(); drawResp();
 });
 let rz = 0;
